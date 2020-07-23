@@ -1,5 +1,6 @@
 """
 This is the main code for automated FX trading
+
 """
 
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -43,7 +44,8 @@ y_ = graph.get_tensor_by_name('Softmax:0')
 log = pd.DataFrame()
 tz = pytz.timezone('Europe/Vilnius')
 start_time = str(datetime.datetime.now(tz))[:-13].replace(':', '-')
-margin_rate = float(trading_sess.check_account_summary()['account']['marginRate'])
+margin_rate = float(trading_sess.check_account_summary()
+                    ['account']['marginRate'])
 last_complete_candle_stamp = ''
 
 
@@ -56,14 +58,16 @@ def do_stuff_every_period():
     current_time = str(datetime.datetime.now(tz))[:-13]
 
     # estimate position size
-    account_balance = np.around(float(trading_sess.check_account_summary()['account']['balance']), 0)
+    account_balance = np.around(
+        float(trading_sess.check_account_summary()['account']['balance']), 0)
     funds_to_commit = account_balance * (1 / margin_rate)
 
     # download latest data
     # always check if new candle is present, because even after 5 seconds, it might be not formed if market is very calm
     # make sure this loop does not loop endlessly on weekends (this is configured in scheduler)
     while True:
-        oanda_data = get_latest_oanda_data('EUR_USD', 'H1', 300)  # many data-points to increase EMA and such accuracy
+        # many data-points to increase EMA and such accuracy
+        oanda_data = get_latest_oanda_data('EUR_USD', 'H1', 300)
         current_complete_candle_stamp = oanda_data[-1]['time']
         if current_complete_candle_stamp != last_complete_candle_stamp:  # if new candle is complete
             break
@@ -72,14 +76,19 @@ def do_stuff_every_period():
 
     # get features
     input_data_raw, input_data_dummy = get_features(oanda_data)
-    input_data, input_data_dummy = remove_nan_rows([input_data_raw, input_data_dummy])
-    input_data_scaled_no_dummy = (input_data - min_max_scaling[1, :]) / (min_max_scaling[0, :] - min_max_scaling[1, :])
-    input_data_scaled = np.concatenate([input_data_scaled_no_dummy, input_data_dummy], axis=1)
+    input_data, input_data_dummy = remove_nan_rows(
+        [input_data_raw, input_data_dummy])
+    input_data_scaled_no_dummy = (
+        input_data - min_max_scaling[1, :]) / (min_max_scaling[0, :] - min_max_scaling[1, :])
+    input_data_scaled = np.concatenate(
+        [input_data_scaled_no_dummy, input_data_dummy], axis=1)
 
     # estimate signal
-    y_pred = sess.run(y_, feed_dict={x: input_data_scaled[-1:, :], drop_out: 1})
+    y_pred = sess.run(
+        y_, feed_dict={x: input_data_scaled[-1:, :], drop_out: 1})
     order_signal_id = y_pred.argmax()
-    order_signal = [1, -1, 0][order_signal_id]  # 0 stands for buy, 1 for sell, 2 for hold
+    # 0 stands for buy, 1 for sell, 2 for hold
+    order_signal = [1, -1, 0][order_signal_id]
 
     # manage trading positions
     current_position = trading_sess.order_book['EUR_USD']['order_type']
@@ -88,7 +97,8 @@ def do_stuff_every_period():
             trading_sess.close_order('EUR_USD')
         trading_sess.open_order('EUR_USD', funds_to_commit * order_signal)
     else:
-        print('{}: EUR_USD (holding)'.format(['Long', 'Short', 'Nothing'][order_signal_id]))
+        print('{}: EUR_USD (holding)'.format(
+            ['Long', 'Short', 'Nothing'][order_signal_id]))
 
     # log
     new_log = pd.DataFrame([[current_time, oanda_data[-1]['closeMid'], y_pred]],
