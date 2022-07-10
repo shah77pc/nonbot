@@ -21,9 +21,9 @@ close_current_positions = True
 start_on_spot = True
 
 # oanda access keys
-accountID = ''
-access_token = ''
-model_name = 'lr-v1-avg_score1.454-2000'
+accountID = '101-004-22768713-002'
+access_token = '70bd97179452d5de017c73fd5b6903c4-62754867c1b007902356da010827d743'
+model_name = 'lr-v2-3000'
 
 # init trading session
 trading_sess = TradingSession(accountID=accountID, access_token=access_token)
